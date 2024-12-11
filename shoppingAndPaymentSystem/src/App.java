@@ -1,12 +1,13 @@
 
 import java.util.ArrayList;
+import java.util.InputMismatchException;
+import java.util.Iterator;
 import java.util.Scanner;
 
 public class App {
 
     private static final ArrayList<Product> products = new ArrayList<>();
     static ArrayList<Product> cart = new ArrayList<>();
-    static int totalPrice = 0;
 
     private static void displayList(Scanner sc) {
         if (products.isEmpty()) {
@@ -19,18 +20,26 @@ public class App {
             System.out.println((i + 1) + ". " + products.get(i));
         }
 
+        addproducts(sc);
+    }
+
+    private static void addproducts(Scanner sc) {
+
         while (true) {
             System.out.print("Enter the product Name to order (or 'done' to finish): ");
+
             String orderProductName = sc.nextLine().trim();
+            if (!orderProductName.matches("[a-zA-Z ]+")) {
+                System.out.println("Invalid input! Please enter a valid product Name.");
+                continue;
+            }
 
             if (orderProductName.equalsIgnoreCase("done")) {
                 System.out.println();
                 System.out.println("Products added to the Cart Successfully!!");
                 System.out.println();
-
                 break;
             }
-
             boolean productFound = false;
 
             for (Product product : products) {
@@ -43,8 +52,6 @@ public class App {
                     sc.nextLine();
                     if (quantityOrdered > 0 && quantityOrdered <= product.getTotalQuantity()) {
                         product.reduceQuanity(quantityOrdered);
-                        int productTotalPrice = product.getCost() * quantityOrdered;
-                        totalPrice += productTotalPrice;
 
                         boolean productInCart = false;
                         for (Product prod : cart) {
@@ -59,23 +66,18 @@ public class App {
                             Product cartProduct = new Product(product.getName(), product.getCost(), quantityOrdered);
                             cart.add(cartProduct);
                         }
-
-                        System.out.println("Cart after adding products: " + cart);
-                        System.out.println("Added " + quantityOrdered + " " + product.getName() + "(s) to the cart. Total Price for this product: " + productTotalPrice);
-
+                        System.out.println("Added " + quantityOrdered + " " + product.getName()
+                                + "(s) to the cart.");
                     } else {
                         System.out.println("Not Enough Stock.");
                     }
                     break;
-
                 }
             }
-
             if (!productFound) {
                 System.out.println("Product not available.");
             }
         }
-
     }
 
     private static void displayCancelList(Scanner sc) {
@@ -85,45 +87,109 @@ public class App {
             System.out.println();
             return;
         }
-        System.out.print("Your are ready to cancel the order?(Yes/No):");
-
+        System.out.print("Are u sure to Modify Cart? (Yes/No): ");
         String productToCancel = sc.nextLine().trim();
-        if (productToCancel.equalsIgnoreCase("yes")) {
-            System.out.println("\n--- Order Summary ---");
-            System.out.printf("%-5s %-20s %-10s %-10s %-10s%n", "S.No", "Product Name", "Quantity", "Unit Price", "Total Quantity");
-            System.out.println("-------------------------------------------------------------");
-            int sno = 1;
-            for (Product prod : cart) {
 
-                System.out.printf("%-5d %-20s %-10d %-10d %-10d%n", sno++, prod.getName(), prod.getTotalQuantity(), prod.getCost(), prod.getTotalQuantity());
-
+        switch (productToCancel.toLowerCase()) {
+            case "yes" -> {
+                processCancellation(sc);
+                break;
             }
-            System.out.println();
-            System.out.print("Enter product name to remove from cart: ");
-            String prodName = sc.nextLine().trim();
-
-            boolean productFound = false;
-            for (Product prod : cart) {
-                if (prod.getName().equalsIgnoreCase(prodName)) {
-                    updateQuantity(prod);
-                    cart.remove(prod);
-                    productFound = true;
-                    System.out.println("Product " + prodName + " has been removed from the cart.");
-                    System.out.println();
-                    break;
-                }
+            case "no" -> {
+                System.out.println();
+                System.out.println("Cancel request denied!");
+                System.out.println();
+                break;
             }
+            default ->
+                System.out.println("Enter a valid response, please! (Yes/No)");
 
-            if (!productFound) {
-                System.out.println("Product not found in the cart.");
-            }
-
-        } else if (productToCancel.equalsIgnoreCase("no")) {
-            System.out.println();
-            System.out.println("Cancel request denied!");
-            System.out.println();
         }
 
+    }
+
+    private static void processCancellation(Scanner sc) {
+        int quantityToRemove;
+        System.out.println("\n--- Order Summary ---");
+        System.out.printf("%-5s %-20s %-10s %-10s %n", "S.No", "Product Name", "Quantity", "Unit Price");
+        System.out.println("-------------------------------------------------------------");
+        int sno = 1;
+        for (Product prod : cart) {
+
+            System.out.printf("%-5d %-20s %-10d %-10d %n", sno++, prod.getName(), prod.getTotalQuantity(),
+                    prod.getCost());
+
+            System.out.println();
+            while (true) {
+                System.out.print("Enter product name to remove from cart: ");
+                String prodName = sc.nextLine().trim();
+
+                if (!prodName.matches("[a-zA-Z ]+")) {
+                    System.out.println("Enter valid product Name from the Cart");
+                    continue;
+                }
+                boolean productFound = false;
+
+                Iterator<Product> it = cart.iterator();
+
+                while (it.hasNext()) {
+                    Product prods = it.next();
+                    if (prods.getName().equalsIgnoreCase(prodName)) {
+                        productFound = true;
+
+                        while (true) {
+
+                            System.out.print("Enter number of quantities to remove: ");
+
+                            try {
+                                quantityToRemove = sc.nextInt();
+                                sc.nextLine();
+                            } catch (InputMismatchException e) {
+                                System.out.println("Please enter a valid number for quantity!");
+                                sc.nextLine();
+                                continue;
+                            }
+
+                            if (quantityToRemove > 0 && quantityToRemove <= prods.getTotalQuantity()) {
+                                prods.reduceQuanity(quantityToRemove);
+                                updateQuantity(prod, quantityToRemove);
+
+                                if (prods.getTotalQuantity() == 0) {
+                                    it.remove();
+                                    System.out.println();
+                                    System.out.println("The Product removed successfully from the cart!");
+                                    System.out.println();
+                                    break;
+                                } else {
+                                    System.out.println(quantityToRemove + " " + prods.getName()
+                                            + "(s) have been removed from the cart!");
+                                }
+                            } else {
+                                System.out.println("Quantity to remove is greater than product's quantity in cart!");
+                                continue;
+                            }
+                            break;
+                        }
+                    }
+                    break;
+                }
+                if (!productFound) {
+                    System.out.println("Product not found in the cart.");
+                }
+                break;
+
+            }
+        }
+
+    }
+
+    private static int calculateTotalPrice() {
+        int totalPrice = 0;
+        for (Product product : cart) {
+            int totalProductPrice = product.getCost() * product.getTotalQuantity();
+            totalPrice += totalProductPrice;
+        }
+        return totalPrice;
     }
 
     private static void cashPayment(Scanner sc, int totalPrice) {
@@ -137,19 +203,34 @@ public class App {
         System.out.print("Choose payment Mode:");
         System.out.println();
 
+        System.out.println("1. Direct Payment");
+        System.out.println("2. EMI");
+        System.out.println("3. Down Payment + EMI");
+        System.out.println();
+
         while (true) {
-            System.out.println("1. Direct Payment");
-            System.out.println("2. EMI");
-            System.out.println("3. Down Payment + EMI");
-            System.out.println();
-            System.out.println("Enter payment Option (1 - 3)");
-            int paymentChoice = sc.nextInt();
-            sc.nextLine();
+            System.out.print("Enter payment Option (1 - 3): ");
+            int paymentChoice;
+
+            try {
+                paymentChoice = sc.nextInt();
+                sc.nextLine(); // This consumes new Line in the buffer when user enters valid input format. For
+                // example user enters 1 and press enter 1<enter> will be added in buffer [1,/n]
+                // nextLine in this will consume the /n in the buffer making it buffer empty
+                // afterwards.....
+
+            } catch (InputMismatchException e) {
+                System.out.println("Enter valid input..");
+                sc.nextLine(); // consumes the new Line in the buffers else cause the while loop to execute
+                // with newLine created due to enter press....Using this clear the buffer Hence
+                // buffer expects user to enter input and execution happends!
+                continue;
+            }
             switch (paymentChoice) {
                 case 1 ->
                     proceedToPayment(sc, totalPrice);
                 case 2 ->
-                    availEMI(sc);
+                    availEMI(sc, totalPrice);
                 case 3 ->
                     DownPaymentWithEMI(sc);
                 default -> {
@@ -164,6 +245,7 @@ public class App {
     }
 
     private static void DownPaymentWithEMI(Scanner sc) {
+        int totalPrice = calculateTotalPrice();
 
         System.out.println("The Total Bill Amount: " + totalPrice);
 
@@ -174,11 +256,12 @@ public class App {
             System.out.println("Payment done successfully!");
         }
         System.out.println("Remaining Balance: Rs. " + totalPrice);
-        availEMI(sc);
+        availEMI(sc, totalPrice);
 
     }
 
     private static int downPayment(Scanner sc) {
+        int totalPrice = calculateTotalPrice();
         while (true) {
             System.out.print("Enter the Down Payment Amount: ");
 
@@ -192,10 +275,12 @@ public class App {
             }
         }
     }
-    //Here we used return once the condition satisfy if not satisfied the loop runs continuously.
-    //Handling varies based on the statement we use either if-else or switch case;
+    // Here we used return once the condition satisfy if not satisfied the loop runs
+    // continuously.
+    // Handling varies based on the statement we use either if-else or switch case;
 
     private static void proceedToPayment(Scanner sc, int totalPrice) {
+        System.out.println("Total Bill Amount: " + totalPrice);
         System.out.print("Please Enter the Cash for Payment:");
         int cash = sc.nextInt();
         sc.nextLine();
@@ -215,13 +300,17 @@ public class App {
 
     }
 
-    //Note For Undersstanding
-    // when in use return in yes/no case, the method will be terminated on reaching return. if any logics resides after switch case will not be executed!
-    //allow the loop to case to continue.
-    //once yes case executed, the switch statement ends, encounterss break statement and terminate the loop.
-    //We can add "return" here to leave method after yes case but.......
-    // terminates the method after executing availEMI Method [Not ideal if there is further statements to be executed in this same method as return terminate/end the method]
-    private static void availEMI(Scanner sc) {
+    // Note For Undersstanding
+    // when in use return in yes/no case, the method will be terminated on reaching
+    // return. if any logics resides after switch case will not be executed!
+    // allow the loop to case to continue.
+    // once yes case executed, the switch statement ends, encounterss break
+    // statement and terminate the loop.
+    // We can add "return" here to leave method after yes case but.......
+    // terminates the method after executing availEMI Method [Not ideal if there is
+    // further statements to be executed in this same method as return terminate/end
+    // the method]
+    private static void availEMI(Scanner sc, int price) {
 
         System.out.println("Please Select the Tenure :");
         System.out.println("1. 6 Months");
@@ -233,8 +322,16 @@ public class App {
         while (true) {
 
             System.out.print("Enter the choice of Tenure (1 - 4): ");
-            int choiceMonth = sc.nextInt();
-            sc.nextLine();
+            int choiceMonth;
+            try {
+                choiceMonth = sc.nextInt();
+                sc.nextLine();
+
+            } catch (Exception e) {
+                sc.nextLine();
+                System.out.println("Invalid input! Please enter between (1 - 4)");
+                continue;
+            }
 
             switch (choiceMonth) {
                 case 1 ->
@@ -247,27 +344,29 @@ public class App {
                     months = 36;
                 default -> {
                     System.out.println("Select choice from the List!");
-                    continue; //Skips the further part of the loop... since we have while true it again starts new iteration
+                    continue; // Skips the further part of the loop... since we have while true it again
+                    // starts new iteration
                 }
             }
 
             break;
         }
 
-        double emiAmount = calculateEMI(months);
+        double emiAmount = calculateEMI(months, price);
         System.out.println();
         System.out.println("You have chosen " + months + " months EMI.");
         System.out.println("Your monthly EMI is: Rs. " + (int) emiAmount);
         System.out.println("Total payment over " + months + " months: Rs. " + (int) (emiAmount * months));
         System.out.println("Thank You!");
         System.out.println();
+        cart.clear();
 
     }
 
-    private static double calculateEMI(int months) {
+    private static double calculateEMI(int months, int billPrice) {
         double interestRate = 0.01;
         double monthlyRate = interestRate / 12;
-        double emiAmount = (totalPrice * monthlyRate * Math.pow(1 + monthlyRate, months))
+        double emiAmount = (billPrice * monthlyRate * Math.pow(1 + monthlyRate, months))
                 / (Math.pow(1 + monthlyRate, months) - 1);
         return emiAmount;
     }
@@ -288,34 +387,38 @@ public class App {
         }
 
         System.out.println("\n--- Order Summary ---");
-        System.out.printf("%-5s %-20s %-10s %-10s %-10s%n", "S.No", "Product Name", "Quantity", "Unit Price", "Total Price");
+        System.out.printf("%-5s %-20s %-10s %-10s %-10s%n", "S.No", "Product Name", "Quantity", "Unit Price",
+                "Total Price");
         System.out.println("-------------------------------------------------------------");
 
         int sno = 1;
+
         for (Product product : cart) {
             int totalProductPrice = product.getCost() * product.getTotalQuantity();
-            System.out.printf("%-5d %-20s %-10d %-10d %-10d%n", sno++, product.getName(), product.getTotalQuantity(), product.getCost(), totalProductPrice);
+            System.out.printf("%-5d %-20s %-10d %-10d %-10d%n", sno++, product.getName(), product.getTotalQuantity(),
+                    product.getCost(), totalProductPrice);
         }
 
         System.out.println("-------------------------------------------------------------");
-        System.out.println("Subtotal (In Rs): " + totalPrice);
+        int billAmount = calculateTotalPrice();
+        System.out.println("Subtotal (In Rs): " + calculateTotalPrice());
 
-        if (totalPrice > 50000) {
-            int discountedPrice = availDiscountPrice(totalPrice);
+        if (billAmount > 50000) {
+            int discountedPrice = availDiscountPrice(billAmount);
             System.out.println("Congratulations! You are qualified for a Discount.");
-            System.out.println("Discounted Total(In Rs): " + discountedPrice);
-            totalPrice = totalPrice - discountedPrice;
+            System.out.println("Discounted Amount(In Rs): " + discountedPrice);
+            billAmount = billAmount - discountedPrice;
         }
 
-        System.out.println("Final Total (In Rs): " + totalPrice);
+        System.out.println("Final Total (In Rs): " + billAmount);
         System.out.println();
     }
 
-    private static void updateQuantity(Product product) {
+    private static void updateQuantity(Product product, int Quantity) {
 
         for (Product prods : products) {
             if (prods.getName().equalsIgnoreCase(product.getName())) {
-                prods.setTotalQuantity(prods.getTotalQuantity() + product.getTotalQuantity());
+                prods.setTotalQuantity(prods.getTotalQuantity() + Quantity);
                 break;
             }
         }
@@ -333,6 +436,9 @@ public class App {
         products.add(new Product("Speakers", 8000, 20));
         products.add(new Product("Headphones", 1200, 40));
         products.add(new Product("Smartwatch", 2000, 15));
+        cart.add(new Product("Speakers", 8000, 10));
+        cart.add(new Product("Headphones", 1200, 5));
+        cart.add(new Product("Smartwatch", 2000, 3));
 
         Scanner sc = new Scanner(System.in);
 
@@ -353,15 +459,12 @@ public class App {
                         displayList(sc);
                     case 2 ->
                         cartSummary();
-                    case 3 -> {
+                    case 3 ->
                         displayCancelList(sc);
-                    }
                     case 4 ->
-                        cashPayment(sc, totalPrice);
+                        cashPayment(sc, calculateTotalPrice());
                     case 5 -> {
-                        {
-                            return;
-                        }
+                        return;
                     }
                     default ->
                         System.out.println("Invalid Number!");
