@@ -113,74 +113,68 @@ public class App {
         System.out.println("\n--- Order Summary ---");
         System.out.printf("%-5s %-20s %-10s %-10s %n", "S.No", "Product Name", "Quantity", "Unit Price");
         System.out.println("-------------------------------------------------------------");
+
         int sno = 1;
         for (Product prod : cart) {
-
             System.out.printf("%-5d %-20s %-10d %-10d %n", sno++, prod.getName(), prod.getTotalQuantity(),
                     prod.getCost());
+        }
 
-            System.out.println();
-            while (true) {
-                System.out.print("Enter product name to remove from cart: ");
-                String prodName = sc.nextLine().trim();
+        while (true) {
+            System.out.print("\nEnter product name to remove from cart (or 'exit' to stop): ");
+            String prodName = sc.nextLine().trim();
 
-                if (!prodName.matches("[a-zA-Z ]+")) {
-                    System.out.println("Enter valid product Name from the Cart");
-                    continue;
-                }
-                boolean productFound = false;
+            if (prodName.equalsIgnoreCase("exit")) {
+                break;
+            }
 
-                Iterator<Product> it = cart.iterator();
+            if (!prodName.matches("[a-zA-Z ]+")) {
+                System.out.println("Enter a valid product name from the Cart.");
+                continue;
+            }
 
-                while (it.hasNext()) {
-                    Product prods = it.next();
-                    if (prods.getName().equalsIgnoreCase(prodName)) {
-                        productFound = true;
+            boolean productFound = false;
 
-                        while (true) {
+            Iterator<Product> it = cart.iterator();
+            while (it.hasNext()) {
+                Product prods = it.next();
+                if (prods.getName().equalsIgnoreCase(prodName)) {
+                    productFound = true;
+                    while (true) {
+                        System.out.print("Enter number of quantities to remove: ");
+                        try {
+                            quantityToRemove = sc.nextInt();
+                            sc.nextLine();
+                        } catch (InputMismatchException e) {
+                            System.out.println("Please enter a valid number for quantity!");
+                            sc.nextLine();
+                            continue;
+                        }
 
-                            System.out.print("Enter number of quantities to remove: ");
+                        if (quantityToRemove > 0 && quantityToRemove <= prods.getTotalQuantity()) {
+                            prods.reduceQuanity(quantityToRemove);
+                            updateQuantity(prods, quantityToRemove);
 
-                            try {
-                                quantityToRemove = sc.nextInt();
-                                sc.nextLine();
-                            } catch (InputMismatchException e) {
-                                System.out.println("Please enter a valid number for quantity!");
-                                sc.nextLine();
-                                continue;
-                            }
-
-                            if (quantityToRemove > 0 && quantityToRemove <= prods.getTotalQuantity()) {
-                                prods.reduceQuanity(quantityToRemove);
-                                updateQuantity(prod, quantityToRemove);
-
-                                if (prods.getTotalQuantity() == 0) {
-                                    it.remove();
-                                    System.out.println();
-                                    System.out.println("The Product removed successfully from the cart!");
-                                    System.out.println();
-                                    break;
-                                } else {
-                                    System.out.println(quantityToRemove + " " + prods.getName()
-                                            + "(s) have been removed from the cart!");
-                                }
+                            if (prods.getTotalQuantity() == 0) {
+                                it.remove();
+                                System.out.println("\nThe Product has been successfully removed from the cart!");
                             } else {
-                                System.out.println("Quantity to remove is greater than product's quantity in cart!");
-                                continue;
+                                System.out.println(quantityToRemove + " " + prods.getName()
+                                        + "(s) have been removed from the cart!");
                             }
                             break;
+                        } else {
+                            System.out.println("Quantity to remove is greater than the product's quantity in cart!");
                         }
                     }
                     break;
                 }
-                if (!productFound) {
-                    System.out.println("Product not found in the cart.");
-                }
-                break;
+            }
 
+            if (!productFound) {
+                System.out.println("Product not found in the cart.");
             }
         }
-
     }
 
     private static int calculateTotalPrice() {
@@ -237,7 +231,6 @@ public class App {
                     System.out.println("Invalid choice. Please enter valid choice between (1 - 3)");
                     continue; // if invalid input continue the loop without moving further
                 }
-
             }
             break;
 
@@ -401,7 +394,7 @@ public class App {
 
         System.out.println("-------------------------------------------------------------");
         int billAmount = calculateTotalPrice();
-        System.out.println("Subtotal (In Rs): " + calculateTotalPrice());
+        System.out.println("Subtotal (In Rs): " + billAmount);
 
         if (billAmount > 50000) {
             int discountedPrice = availDiscountPrice(billAmount);
